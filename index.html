@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>DualPay Calculator</title>
     
-    <!-- PWA Primary Meta Tags -->
+    <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#f3e8ff">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -158,9 +158,7 @@
 
         <footer class="py-4 px-6 bg-white/30 backdrop-blur-sm border-t border-white/20 text-center shrink-0">
             <p class="text-xs font-bold text-gray-600 font-montserrat">Курс: 1 EUR = 1.95583 BGN</p>
-            <div id="pwa-status" class="text-[9px] text-gray-400 mt-1 uppercase tracking-tighter">
-                © Gemini AI Solutions • v2.1
-            </div>
+            <p class="text-[10px] text-gray-400 mt-1 uppercase tracking-widest">© Gemini Solutions • v2.2</p>
         </footer>
     </main>
 
@@ -245,8 +243,8 @@
         ui.resBtnEUR.onclick = () => { resultCurrency = 'EUR'; updateUI(); };
 
         function updateUI() {
-            ui.btnTotalBGN.className = targetCurrency === 'BGN' ? "px-3 py-1 rounded-md text-sm font-bold bg-white shadow text-accent transition-all" : "px-3 py-1 rounded-md text-sm font-bold text-gray-500 hover:text-gray-700 transition-all";
-            ui.btnTotalEUR.className = targetCurrency === 'EUR' ? "px-3 py-1 rounded-md text-sm font-bold bg-white shadow text-accent transition-all" : "px-3 py-1 rounded-md text-sm font-bold text-gray-500 hover:text-gray-700 transition-all";
+            ui.btnTotalBGN.className = targetCurrency === 'BGN' ? "px-3 py-1 rounded-md text-sm font-bold bg-white shadow text-accent transition-all" : "px-3 py-1 rounded-md text-sm font-bold text-gray-500 transition-all";
+            ui.btnTotalEUR.className = targetCurrency === 'EUR' ? "px-3 py-1 rounded-md text-sm font-bold bg-white shadow text-accent transition-all" : "px-3 py-1 rounded-md text-sm font-bold text-gray-500 transition-all";
             ui.resBtnBGN.className = resultCurrency === 'BGN' ? "flex-1 py-1.5 rounded-lg text-sm font-bold bg-white text-accent shadow transition-all" : "flex-1 py-1.5 rounded-lg text-sm font-bold text-gray-500 transition-all";
             ui.resBtnEUR.className = resultCurrency === 'EUR' ? "flex-1 py-1.5 rounded-lg text-sm font-bold bg-white text-accent shadow transition-all" : "flex-1 py-1.5 rounded-lg text-sm font-bold text-gray-500 transition-all";
             calculate();
@@ -256,7 +254,6 @@
 
         // --- PWA LOGIC (SINGLE FILE SOLUTION) ---
         (function() {
-            // 1. Generate Icons
             const canvas = document.createElement('canvas');
             canvas.width = 512; canvas.height = 512;
             const ctx = canvas.getContext('2d');
@@ -265,12 +262,10 @@
             ctx.fillText('DualPay', 256, 256);
             const iconUrl = canvas.toDataURL('image/png');
 
-            // 2. Inject Meta & Favicon
             const linkIcon = document.createElement('link'); linkIcon.rel = 'icon'; linkIcon.href = iconUrl;
             const appleIcon = document.createElement('link'); appleIcon.rel = 'apple-touch-icon'; appleIcon.href = iconUrl;
             document.head.appendChild(linkIcon); document.head.appendChild(appleIcon);
 
-            // 3. Web Manifest
             const manifest = {
                 "name": "DualPay Calculator",
                 "short_name": "DualPay",
@@ -281,35 +276,25 @@
                 "icons": [{ "src": iconUrl, "sizes": "512x512", "type": "image/png" }]
             };
             const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/manifest+json'});
-            const manifestURL = URL.createObjectURL(manifestBlob);
-            const manifestLink = document.createElement('link'); manifestLink.rel = 'manifest'; manifestLink.href = manifestURL;
+            const manifestLink = document.createElement('link'); manifestLink.rel = 'manifest'; manifestLink.href = URL.createObjectURL(manifestBlob);
             document.head.appendChild(manifestLink);
 
-            // 4. Service Worker (Updated to avoid Blob error in restricted environments)
-            // If we are in a typical web environment, try to register
-            if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+            // Фикс за ServiceWorker грешката
+            if ('serviceWorker' in navigator) {
                 try {
-                    // Note: Most modern browsers require the SW script to be a separate file on the server.
-                    // Blob registration is often blocked by Content Security Policy (CSP).
-                    // We keep the logic but wrap it in a try/catch to prevent the error from breaking the app.
-                    
                     const swCode = `
                         self.addEventListener('install', (e) => self.skipWaiting());
                         self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
-                        self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request)));
+                        self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
                     `;
                     const swBlob = new Blob([swCode], {type: 'application/javascript'});
                     const swURL = URL.createObjectURL(swBlob);
                     
-                    navigator.serviceWorker.register(swURL)
-                        .then(() => console.log('SW Registered'))
-                        .catch(err => {
-                            console.warn('ServiceWorker registration via Blob is not supported in this environment.');
-                            // This is a known limitation in some secure sandboxes.
+                    navigator.serviceWorker.register(swURL, {scope: './'})
+                        .catch(() => {
+                            // Игнорираме грешката, ако blob: е забранен
                         });
-                } catch (e) {
-                    console.error('ServiceWorker setup failed:', e);
-                }
+                } catch (e) {}
             }
         })();
     </script>
